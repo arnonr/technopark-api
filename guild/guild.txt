@@ -1,0 +1,7 @@
+ขั้นตอนการ Migrate DB
+1- npx prisma migrate dev --create-only
+2- ลบ REMOVE ออกภ้ามีคำสั่ง REMOVE ในไฟล์ MIGRATE
+3- sudo npx prisma migrate dev
+
+
+Backend เหลือเอกสารดาวน์โหลด

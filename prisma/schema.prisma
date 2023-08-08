@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+model news_type {
+    id         Int       @id @default(autoincrement())
+    name       String    @db.VarChar(500)
+    is_active  Int       @default(1)
+    is_publish Int       @default(1)
+    created_at DateTime? @default(now()) @db.DateTime(0)
+    created_by String    @db.VarChar(255)
+    updated_at DateTime? @updatedAt
+    updated_by String    @db.VarChar(255)
+    deleted_at DateTime?
+    news       news[]
+}
+
+model news {
+    id           Int       @id @default(autoincrement())
+    news_type    news_type @relation(fields: [news_type_id], references: [id])
+    news_type_id Int
+    title        String    @db.VarChar(500)
+    detail       String    @db.LongText
+    news_file    String    @db.VarChar(500)
+    is_active    Int       @default(1)
+    is_publish   Int       @default(1)
+    count_views  Int       @default(0)
+    created_news DateTime  @db.Date
+    created_at   DateTime? @default(now()) @db.DateTime(0)
+    created_by   String    @db.VarChar(255)
+    updated_at   DateTime? @updatedAt
+    updated_by   String    @db.VarChar(255)
+    deleted_at   DateTime?
+}
+
+model annouce {
+    id              Int       @id @default(autoincrement())
+    title           String    @db.VarChar(500)
+    annouce_file    String    @db.VarChar(500)
+    is_active       Int       @default(1)
+    is_publish      Int       @default(1)
+    count_views     Int       @default(0)
+    created_annouce DateTime  @db.Date
+    created_at      DateTime? @default(now()) @db.DateTime(0)
+    created_by      String    @db.VarChar(255)
+    updated_at      DateTime? @updatedAt
+    updated_by      String    @db.VarChar(255)
+    deleted_at      DateTime?
+}
+
+model banner {
+    id              Int       @id @default(autoincrement())
+    title           String    @db.VarChar(500)
+    banner_file     String    @db.VarChar(500)
+    banner_url      String    @db.VarChar(500)
+    is_active       Int       @default(1)
+    is_publish      Int       @default(1)
+    count_views     Int       @default(0)
+    created_banner DateTime  @db.Date
+    created_at      DateTime? @default(now()) @db.DateTime(0)
+    created_by      String    @db.VarChar(255)
+    updated_at      DateTime? @updatedAt
+    updated_by      String    @db.VarChar(255)
+    deleted_at      DateTime?
+}
+
+model video {
+    id              Int       @id @default(autoincrement())
+    title           String    @db.VarChar(500)
+    video_url       String    @db.VarChar(500)
+    video_file      String    @db.VarChar(500)
+    is_active       Int       @default(1)
+    is_publish      Int       @default(1)
+    count_views     Int       @default(0)
+    created_video DateTime  @db.Date
+    created_at      DateTime? @default(now()) @db.DateTime(0)
+    created_by      String    @db.VarChar(255)
+    updated_at      DateTime? @updatedAt
+    updated_by      String    @db.VarChar(255)
+    deleted_at      DateTime?
+}
+
+model about {
+    id           Int       @id @default(autoincrement())
+    title        String    @db.VarChar(500)
+    detail       String    @db.LongText
+    is_active    Int       @default(1)
+    is_publish   Int       @default(1)
+    count_views  Int       @default(0)
+    created_about DateTime  @db.Date
+    created_at   DateTime? @default(now()) @db.DateTime(0)
+    created_by   String    @db.VarChar(255)
+    updated_at   DateTime? @updatedAt
+    updated_by   String    @db.VarChar(255)
+    deleted_at   DateTime?
+}
+
+
+
+model department {
+    id         Int       @id @default(autoincrement())
+    name       String    @db.VarChar(500)
+    level      Int
+    is_active  Int       @default(1)
+    is_publish Int       @default(1)
+    created_at DateTime? @default(now()) @db.DateTime(0)
+    created_by String    @db.VarChar(255)
+    updated_at DateTime? @updatedAt
+    updated_by String    @db.VarChar(255)
+    deleted_at DateTime?
+    team       team[]
+}
+
+model team {
+    id              Int         @id @default(autoincrement())
+    department      department  @relation(fields: [department_id], references: [id])
+    department_id   Int
+    prefix          String       @db.VarChar(500)
+    firstname       String       @db.VarChar(500)
+    surname         String       @db.VarChar(500)
+    position        String       @db.VarChar(500)
+    position_level  String       @db.VarChar(500)
+    phone           String       @db.VarChar(50)
+    email           String       @db.VarChar(255)
+    level           Int
+    team_file       String       @db.VarChar(500)
+    is_active    Int       @default(1)
+    is_publish   Int       @default(1)
+    created_at   DateTime? @default(now()) @db.DateTime(0)
+    created_by   String    @db.VarChar(255)
+    updated_at   DateTime? @updatedAt
+    updated_by   String    @db.VarChar(255)
+    deleted_at   DateTime?
+}
