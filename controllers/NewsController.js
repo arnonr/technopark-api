@@ -38,7 +38,7 @@ const filterData = (req) => {
   if (req.query.title) {
     $where["title"] = {
       contains: req.query.title,
-      mode: "insensitive",
+      //   mode: "insensitive",
     };
   }
 
@@ -193,7 +193,17 @@ const methods = {
           updated_by: "arnonr",
         },
       });
-      res.status(201).json(item);
+
+      const updateGallery = await prisma.news_gallery.updateMany({
+        where: {
+          secret_key: req.body.secret_key,
+        },
+        data: {
+          news_id: item.id,
+        },
+      });
+
+      res.status(201).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
@@ -207,10 +217,6 @@ const methods = {
         "/images/news/",
         "news_file"
       );
-
-      if (pathFile == "error") {
-        return res.status(500).send("error");
-      }
 
       const item = await prisma.news.update({
         where: {
@@ -236,7 +242,7 @@ const methods = {
         },
       });
 
-      res.status(200).json(item);
+      res.status(200).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }

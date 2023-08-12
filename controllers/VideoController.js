@@ -31,7 +31,6 @@ const filterData = (req) => {
   if (req.query.title) {
     $where["title"] = {
       contains: req.query.title,
-      mode: "insensitive",
     };
   }
 

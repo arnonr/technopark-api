@@ -8,6 +8,8 @@ const video = require("./api/video");
 const about = require("./api/about");
 const department = require("./api/department");
 const team = require("./api/team");
+const froala = require("./api/froala");
+const newsGallery = require("./api/news-gallery");
 
 const router = express.Router();
 
@@ -21,6 +23,8 @@ router.use(
   router.use("/about", about),
   router.use("/department", department),
   router.use("/team", team),
+  router.use("/froala", froala),
+  router.use("/news-gallery", newsGallery),
 );
 
 module.exports = router;

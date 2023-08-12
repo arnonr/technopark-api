@@ -32,21 +32,18 @@ const filterData = (req) => {
   if (req.query.prefix) {
     $where["prefix"] = {
       contains: req.query.prefix,
-      mode: "insensitive",
     };
   }
 
   if (req.query.firstname) {
     $where["firstname"] = {
       contains: req.query.firstname,
-      mode: "insensitive",
     };
   }
 
   if (req.query.surname) {
     $where["surname"] = {
       contains: req.query.surname,
-      mode: "insensitive",
     };
   }
 
