@@ -182,7 +182,7 @@ const methods = {
           updated_by: "arnonr",
         },
       });
-      res.status(201).json(item);
+      res.status(201).json({...item,msg: 'success'});
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
@@ -206,7 +206,7 @@ const methods = {
           id: Number(req.params.id),
         },
         data: {
-          team_type_id:
+          department_id:
             req.body.department_id != null
               ? Number(req.body.department_id)
               : undefined,
@@ -228,7 +228,7 @@ const methods = {
         },
       });
 
-      res.status(200).json(item);
+      res.status(200).json({...item,msg: 'success'});
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }

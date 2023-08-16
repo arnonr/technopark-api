@@ -173,7 +173,7 @@ const methods = {
           updated_by: "arnonr",
         },
       });
-      res.status(201).json(item);
+      res.status(201).json({...item,msg: 'success'});
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
@@ -211,7 +211,7 @@ const methods = {
         },
       });
 
-      res.status(200).json(item);
+      res.status(200).json({...item,msg: 'success'});
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
