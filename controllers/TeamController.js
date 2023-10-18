@@ -1,18 +1,17 @@
 const { PrismaClient } = require("@prisma/client");
 const uploadController = require("./UploadsController");
 
-// select แบบพิเศษ
 const prisma = new PrismaClient().$extends({
   result: {
     team: {
       team_file: {
         needs: { team_file: true },
         compute(team) {
-          let team_file = null;
+          let file = null;
           if (team.team_file != null) {
-            team_file = process.env.PATH_UPLOAD + team.team_file;
+            file = process.env.PATH_UPLOAD + team.team_file;
           }
-          return team_file;
+          return file;
         },
       },
     },
@@ -29,21 +28,46 @@ const filterData = (req) => {
     $where["id"] = parseInt(req.query.id);
   }
 
-  if (req.query.prefix) {
-    $where["prefix"] = {
-      contains: req.query.prefix,
+  if (req.query.lang && req.query.lang == "en") {
+    $where["firstname_en"] = {
+      not: null,
+      not: "",
     };
   }
 
-  if (req.query.firstname) {
-    $where["firstname"] = {
-      contains: req.query.firstname,
+  if (req.query.prefix_th) {
+    $where["prefix_th"] = {
+      contains: req.query.prefix_th,
     };
   }
 
-  if (req.query.surname) {
-    $where["surname"] = {
-      contains: req.query.surname,
+  if (req.query.prefix_en) {
+    $where["prefix_en"] = {
+      contains: req.query.prefix_en,
+    };
+  }
+
+  if (req.query.firstname_th) {
+    $where["firstname_th"] = {
+      contains: req.query.firstname_th,
+    };
+  }
+
+  if (req.query.firstname_en) {
+    $where["firstname_en"] = {
+      contains: req.query.firstname_en,
+    };
+  }
+
+  if (req.query.surname_th) {
+    $where["surname_th"] = {
+      contains: req.query.surname_th,
+    };
+  }
+
+  if (req.query.surname_en) {
+    $where["surname_en"] = {
+      contains: req.query.surname_en,
     };
   }
 
@@ -70,7 +94,6 @@ const countDataAndOrder = async (req, $where) => {
 
   //Count
   let $count = await prisma.team.findMany({
-    select: selectField,
     where: $where,
   });
 
@@ -94,22 +117,96 @@ const countDataAndOrder = async (req, $where) => {
 // ฟิลด์ที่ต้องการ Select รวมถึง join
 const selectField = {
   id: true,
-  prefix: true,
-  firstname: true,
-  surname: true,
-  position: true,
-  position_level: true,
-  level: true,
+  prefix_th: true,
+  prefix_en: true,
+  firstname_th: true,
+  firstname_en: true,
+  surname_th: true,
+  surname_en: true,
+  position_th: true,
+  position_en: true,
+  position_level_th: true,
+  position_level_en: true,
   phone: true,
   email: true,
+  level: true,
   department_id: true,
   team_file: true,
   is_publish: true,
   department: {
     select: {
+      name_th: true,
+      name_en: true,
       name: true,
     },
   },
+  prefix: true,
+  firstname: true,
+  surname: true,
+  position: true,
+  position_level: true,
+};
+
+// ปรับ Language
+const checkLanguage = (req) => {
+  let prismaLang = prisma.$extends({
+    result: {
+      team: {
+        prefix: {
+          needs: { prefix_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.prefix_en
+              : table.prefix_th;
+          },
+        },
+        firstname: {
+          needs: { firstname_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.firstname_en
+              : table.firstname_th;
+          },
+        },
+        surname: {
+          needs: { surname_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.surname_en
+              : table.surname_th;
+          },
+        },
+        position: {
+          needs: { position_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.position_en
+              : table.position_th;
+          },
+        },
+        position_level: {
+          needs: { position_level_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.position_level_en
+              : table.position_level_th;
+          },
+        },
+      },
+      department: {
+        name: {
+          needs: { name_th: true },
+          compute(table) {
+            return req.query.lang && req.query.lang == "en"
+              ? table.name_en
+              : table.name_th;
+          },
+        },
+      },
+    },
+  });
+
+  return prismaLang;
 };
 
 const methods = {
@@ -119,7 +216,9 @@ const methods = {
       let $where = filterData(req);
       let other = await countDataAndOrder(req, $where);
 
-      const item = await prisma.team.findMany({
+      let prismaLang = checkLanguage(req);
+
+      const item = await prismaLang.team.findMany({
         select: selectField,
         where: $where,
         orderBy: other.$orderBy,
@@ -132,6 +231,7 @@ const methods = {
         totalData: other.$count,
         totalPage: other.$totalPage,
         currentPage: other.$currentPage,
+        msg: "success",
       });
     } catch (error) {
       res.status(500).json({ msg: error.message });
@@ -140,13 +240,15 @@ const methods = {
   // ค้นหาเรคคอร์ดเดียว
   async onGetById(req, res) {
     try {
-      const item = await prisma.team.findUnique({
+      let prismaLang = checkLanguage(req);
+
+      const item = await prismaLang.team.findUnique({
         select: selectField,
         where: {
           id: Number(req.params.id),
         },
       });
-      res.status(200).json({ data: item });
+      res.status(200).json({ data: item, msg: " success" });
     } catch (error) {
       res.status(404).json({ msg: error.message });
     }
@@ -168,21 +270,26 @@ const methods = {
       const item = await prisma.team.create({
         data: {
           department_id: Number(req.body.department_id),
-          prefix: req.body.prefix,
-          firstname: req.body.firstname,
-          surname: req.body.surname,
-          position: req.body.position,
-          position_level: req.body.position_level,
+          prefix_th: req.body.prefix_th,
+          prefix_en: req.body.prefix_en,
+          firstname_th: req.body.firstname_th,
+          firstname_en: req.body.firstname_en,
+          surname_th: req.body.surname_th,
+          surname_en: req.body.surname_en,
+          position_th: req.body.position_th,
+          position_en: req.body.position_en,
+          position_level_th: req.body.position_level_th,
+          position_level_en: req.body.position_level_en,
           phone: req.body.phone,
           email: req.body.email,
-          level:  Number(req.body.level),
+          level: Number(req.body.level),
           team_file: pathFile,
           is_publish: Number(req.body.is_publish),
           created_by: "arnonr",
           updated_by: "arnonr",
         },
       });
-      res.status(201).json({...item,msg: 'success'});
+      res.status(201).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
@@ -211,11 +318,24 @@ const methods = {
               ? Number(req.body.department_id)
               : undefined,
 
-          prefix: req.body.prefix != null ? req.body.prefix : undefined,
-          firstname: req.body.firstname != null ? req.body.firstname : undefined,
-          surname: req.body.surname != null ? req.body.surname : undefined,
-          position: req.body.position != null ? req.body.position : undefined,
-          position_level: req.body.position_level != null ? req.body.position_level : undefined,
+          prefix_th: req.body.prefix_th != null ? req.body.prefix_th : undefined,
+          prefix_en: req.body.prefix_en != null ? req.body.prefix_en : undefined,
+          firstname_th:
+            req.body.firstname_th != null ? req.body.firstname_th : undefined,
+          firstname_en:
+            req.body.firstname_en != null ? req.body.firstname_en : undefined,
+          surname_th: req.body.surname_th != null ? req.body.surname_th : undefined,
+          surname_en: req.body.surname_en != null ? req.body.surname_en : undefined,
+          position_th: req.body.position_th != null ? req.body.position_th : undefined,
+          position_en: req.body.position_en != null ? req.body.position_en : undefined,
+          position_level_th:
+            req.body.position_level_th != null
+              ? req.body.position_level_th
+              : undefined,
+          position_level_en:
+            req.body.position_level_en != null
+              ? req.body.position_level_en
+              : undefined,
           phone: req.body.phone != null ? req.body.phone : undefined,
           email: req.body.email != null ? req.body.email : undefined,
           level: req.body.level != null ? Number(req.body.level) : undefined,
@@ -228,7 +348,7 @@ const methods = {
         },
       });
 
-      res.status(200).json({...item,msg: 'success'});
+      res.status(200).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }

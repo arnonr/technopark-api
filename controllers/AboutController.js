@@ -11,10 +11,35 @@ const filterData = (req) => {
     $where["id"] = parseInt(req.query.id);
   }
 
-  if (req.query.title) {
-    $where["title"] = {
-      contains: req.query.title,
+  if (req.query.lang && req.query.lang == "en") {
+    $where["title_en"] = {
+      not: null,
+      not: "",
     };
+  }
+
+  if (req.query.title_th) {
+    $where["title_th"] = {
+      contains: req.query.title_th,
+      //   mode: "insensitive",
+    };
+  }
+
+  if (req.query.title_en) {
+    $where["title_en"] = {
+      contains: req.query.title_en,
+      //   mode: "insensitive",
+    };
+  }
+
+  if (req.query.title) {
+    if (req.query.lang && req.query.lang == "th") {
+      $where["title_th"] = {
+        contains: req.query.title,
+      };
+    } else {
+      $where["title_en"]["contains"] = req.query.title;
+    }
   }
 
   if (req.query.is_publish) {
@@ -61,7 +86,6 @@ const countDataAndOrder = async (req, $where) => {
 
   //Count
   let $count = await prisma.about.findMany({
-    select: selectField,
     where: $where,
   });
 
@@ -85,11 +109,43 @@ const countDataAndOrder = async (req, $where) => {
 // ฟิลด์ที่ต้องการ Select รวมถึง join
 const selectField = {
   id: true,
-  title: true,
-  detail: true,
+  title_th: true,
+  title_en: true,
+  detail_th: true,
+  detail_en: true,
   is_publish: true,
   count_views: true,
   created_about: true,
+  title: true,
+  detail: true,
+};
+
+// ปรับ Language
+const checkLanguage = (req) => {
+  let prismaLang = prisma.$extends({
+    result: {
+      about: {
+        title: {
+          needs: { title_th: true },
+          compute(about) {
+            return req.query.lang && req.query.lang == "en"
+              ? about.title_en
+              : about.title_th;
+          },
+        },
+        detail: {
+          needs: { detail_th: true },
+          compute(about) {
+            return req.query.lang && req.query.lang == "en"
+              ? about.detail_en
+              : about.detail_th;
+          },
+        },
+      },
+    },
+  });
+
+  return prismaLang;
 };
 
 const methods = {
@@ -98,8 +154,9 @@ const methods = {
     try {
       let $where = filterData(req);
       let other = await countDataAndOrder(req, $where);
+      let prismaLang = checkLanguage(req);
 
-      const item = await prisma.about.findMany({
+      const item = await prismaLang.about.findMany({
         select: selectField,
         where: $where,
         orderBy: other.$orderBy,
@@ -112,6 +169,7 @@ const methods = {
         totalData: other.$count,
         totalPage: other.$totalPage,
         currentPage: other.$currentPage,
+        msg: "success",
       });
     } catch (error) {
       res.status(500).json({ msg: error.message });
@@ -120,13 +178,14 @@ const methods = {
   // ค้นหาเรคคอร์ดเดียว
   async onGetById(req, res) {
     try {
-      const item = await prisma.about.findUnique({
+      let prismaLang = checkLanguage(req);
+      const item = await prismaLang.about.findUnique({
         select: selectField,
         where: {
           id: Number(req.params.id),
         },
       });
-      res.status(200).json({ data: item });
+      res.status(200).json({ data: item, msg: " success" });
     } catch (error) {
       res.status(404).json({ msg: error.message });
     }
@@ -135,11 +194,12 @@ const methods = {
   // สร้าง
   async onCreate(req, res) {
     try {
-      
       const item = await prisma.about.create({
         data: {
-          title: req.body.title,
-          detail: req.body.detail,
+          title_th: req.body.title_th,
+          title_en: req.body.title_en,
+          detail_th: req.body.detail_th,
+          detail_en: req.body.detail_en,
           is_publish: Number(req.body.is_publish),
           created_about: new Date(req.body.created_about),
           created_by: "arnonr",
@@ -160,8 +220,12 @@ const methods = {
           id: Number(req.params.id),
         },
         data: {
-          title: req.body.title != null ? req.body.title : undefined,
-          detail: req.body.detail != null ? req.body.detail : undefined,
+          title_th: req.body.title_th != null ? req.body.title_th : undefined,
+          title_en: req.body.title_en != null ? req.body.title_en : undefined,
+          detail_th:
+            req.body.detail_th != null ? req.body.detail_th : undefined,
+          detail_en:
+            req.body.detail_en != null ? req.body.detail_en : undefined,
           is_publish:
             req.body.is_publish != null
               ? Number(req.body.is_publish)

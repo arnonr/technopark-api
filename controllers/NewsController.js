@@ -1,7 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const uploadController = require("./UploadsController");
 
-// select แบบพิเศษ
 const prisma = new PrismaClient().$extends({
   result: {
     news: {
@@ -35,11 +34,35 @@ const filterData = (req) => {
     $where["id"] = parseInt(req.query.id);
   }
 
-  if (req.query.title) {
-    $where["title"] = {
-      contains: req.query.title,
+  if (req.query.lang && req.query.lang == "en") {
+    $where["title_en"] = {
+      not: null,
+      not: "",
+    };
+  }
+
+  if (req.query.title_th) {
+    $where["title_th"] = {
+      contains: req.query.title_th,
       //   mode: "insensitive",
     };
+  }
+
+  if (req.query.title_en) {
+    $where["title_en"] = {
+      contains: req.query.title_en,
+      //   mode: "insensitive",
+    };
+  }
+
+  if (req.query.title) {
+    if (req.query.lang && req.query.lang == "th") {
+      $where["title_th"] = {
+        contains: req.query.title,
+      };
+    } else {
+      $where["title_en"]["contains"] = req.query.title;
+    }
   }
 
   if (req.query.news_type_id) {
@@ -90,7 +113,6 @@ const countDataAndOrder = async (req, $where) => {
 
   //Count
   let $count = await prisma.news.findMany({
-    select: selectField,
     where: $where,
   });
 
@@ -114,18 +136,62 @@ const countDataAndOrder = async (req, $where) => {
 // ฟิลด์ที่ต้องการ Select รวมถึง join
 const selectField = {
   id: true,
-  title: true,
+  title_th: true,
+  title_en: true,
   news_type_id: true,
-  detail: true,
+  detail_th: true,
+  detail_en: true,
   news_file: true,
   is_publish: true,
   count_views: true,
   created_news: true,
+  title: true,
+  detail: true,
   news_type: {
     select: {
+      name_th: true,
+      name_en: true,
       name: true,
     },
   },
+};
+
+// ปรับ Language
+const checkLanguage = (req) => {
+  let prismaLang = prisma.$extends({
+    result: {
+      news: {
+        title: {
+          needs: { title_th: true },
+          compute(news) {
+            return req.query.lang && req.query.lang == "en"
+              ? news.title_en
+              : news.title_th;
+          },
+        },
+        detail: {
+          needs: { detail_th: true },
+          compute(news) {
+            return req.query.lang && req.query.lang == "en"
+              ? news.detail_en
+              : news.detail_th;
+          },
+        },
+      },
+      news_type: {
+        name: {
+          needs: { name_th: true },
+          compute(news_type) {
+            return req.query.lang && req.query.lang == "en"
+              ? news_type.name_en
+              : news_type.name_th;
+          },
+        },
+      },
+    },
+  });
+
+  return prismaLang;
 };
 
 const methods = {
@@ -135,7 +201,9 @@ const methods = {
       let $where = filterData(req);
       let other = await countDataAndOrder(req, $where);
 
-      const item = await prisma.news.findMany({
+      let prismaLang = checkLanguage(req);
+
+      const item = await prismaLang.news.findMany({
         select: selectField,
         where: $where,
         orderBy: other.$orderBy,
@@ -148,6 +216,7 @@ const methods = {
         totalData: other.$count,
         totalPage: other.$totalPage,
         currentPage: other.$currentPage,
+        msg: "success",
       });
     } catch (error) {
       res.status(500).json({ msg: error.message });
@@ -156,13 +225,14 @@ const methods = {
   // ค้นหาเรคคอร์ดเดียว
   async onGetById(req, res) {
     try {
-      const item = await prisma.news.findUnique({
+      let prismaLang = checkLanguage(req);
+      const item = await prismaLang.news.findUnique({
         select: selectField,
         where: {
           id: Number(req.params.id),
         },
       });
-      res.status(200).json({ data: item });
+      res.status(200).json({ data: item, msg: " success" });
     } catch (error) {
       res.status(404).json({ msg: error.message });
     }
@@ -184,8 +254,10 @@ const methods = {
       const item = await prisma.news.create({
         data: {
           news_type_id: Number(req.body.news_type_id),
-          title: req.body.title,
-          detail: req.body.detail,
+          title_th: req.body.title_th,
+          title_en: req.body.title_en,
+          detail_th: req.body.detail_th,
+          detail_en: req.body.detail_en,
           news_file: pathFile,
           is_publish: Number(req.body.is_publish),
           created_news: new Date(req.body.created_news),
@@ -194,7 +266,8 @@ const methods = {
         },
       });
 
-      const updateGallery = await prisma.news_gallery.updateMany({
+      //   const updateGallery =
+      await prisma.news_gallery.updateMany({
         where: {
           secret_key: req.body.secret_key,
         },
@@ -218,17 +291,25 @@ const methods = {
         "news_file"
       );
 
+      if (pathFile == "error") {
+        return res.status(500).send("error");
+      }
+
       const item = await prisma.news.update({
         where: {
           id: Number(req.params.id),
         },
         data: {
+          title_th: req.body.title_th != null ? req.body.title_th : undefined,
+          title_en: req.body.title_en != null ? req.body.title_en : undefined,
           news_type_id:
             req.body.news_type_id != null
               ? Number(req.body.news_type_id)
               : undefined,
-          title: req.body.title != null ? req.body.title : undefined,
-          detail: req.body.detail != null ? req.body.detail : undefined,
+          detail_th:
+            req.body.detail_th != null ? req.body.detail_th : undefined,
+          detail_en:
+            req.body.detail_en != null ? req.body.detail_en : undefined,
           news_file: pathFile != null ? pathFile : undefined,
           is_publish:
             req.body.is_publish != null

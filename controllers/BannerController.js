@@ -29,9 +29,15 @@ const filterData = (req) => {
     $where["id"] = parseInt(req.query.id);
   }
 
-  if (req.query.title) {
-    $where["title"] = {
-      contains: req.query.title,
+  if (req.query.title_th) {
+    $where["title_th"] = {
+      contains: req.query.title_th,
+    };
+  }
+
+  if (req.query.title_en) {
+    $where["title_en"] = {
+      contains: req.query.title_en,
     };
   }
 
@@ -79,7 +85,7 @@ const countDataAndOrder = async (req, $where) => {
 
   //Count
   let $count = await prisma.banner.findMany({
-    select: selectField,
+    // select: selectField,
     where: $where,
   });
 
@@ -103,12 +109,34 @@ const countDataAndOrder = async (req, $where) => {
 // ฟิลด์ที่ต้องการ Select รวมถึง join
 const selectField = {
   id: true,
-  title: true,
+  title_th: true,
+  title_en: true,
   banner_file: true,
   banner_url: true,
   is_publish: true,
   count_views: true,
   created_banner: true,
+  title: true,
+};
+
+// ปรับ Language
+const checkLanguage = (req) => {
+  let prismaLang = prisma.$extends({
+    result: {
+      banner: {
+        title: {
+          needs: { title_th: true },
+          compute(banner) {
+            return req.query.lang && req.query.lang == "en"
+              ? banner.title_en
+              : banner.title_th;
+          },
+        },
+      },
+    },
+  });
+
+  return prismaLang;
 };
 
 const methods = {
@@ -118,7 +146,9 @@ const methods = {
       let $where = filterData(req);
       let other = await countDataAndOrder(req, $where);
 
-      const item = await prisma.banner.findMany({
+      let prismaLang = checkLanguage(req);
+
+      const item = await prismaLang.banner.findMany({
         select: selectField,
         where: $where,
         orderBy: other.$orderBy,
@@ -136,10 +166,13 @@ const methods = {
       res.status(500).json({ msg: error.message });
     }
   },
+
   // ค้นหาเรคคอร์ดเดียว
   async onGetById(req, res) {
     try {
-      const item = await prisma.banner.findUnique({
+      let prismaLang = checkLanguage(req);
+
+      const item = await prismaLang.banner.findUnique({
         select: selectField,
         where: {
           id: Number(req.params.id),
@@ -166,7 +199,8 @@ const methods = {
 
       const item = await prisma.banner.create({
         data: {
-          title: req.body.title,
+          title_th: req.body.title_th,
+          title_en: req.body.title_en,
           banner_file: pathFile,
           banner_url: req.body.banner_url,
           is_publish: Number(req.body.is_publish),
@@ -175,7 +209,7 @@ const methods = {
           updated_by: "arnonr",
         },
       });
-      res.status(201).json(item);
+      res.status(201).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
@@ -199,9 +233,11 @@ const methods = {
           id: Number(req.params.id),
         },
         data: {
-          title: req.body.title != null ? req.body.title : undefined,
+          title_th: req.body.title_th != null ? req.body.title_th : undefined,
+          title_en: req.body.title_en != null ? req.body.title_en : undefined,
           banner_file: pathFile != null ? pathFile : undefined,
-          banner_url: req.body.banner_url  != null ? req.body.banner_url : undefined,
+          banner_url:
+            req.body.banner_url != null ? req.body.banner_url : undefined,
           is_publish:
             req.body.is_publish != null
               ? Number(req.body.is_publish)
@@ -214,7 +250,7 @@ const methods = {
         },
       });
 
-      res.status(200).json(item);
+      res.status(200).json({ ...item, msg: "success" });
     } catch (error) {
       res.status(400).json({ msg: error.message });
     }
